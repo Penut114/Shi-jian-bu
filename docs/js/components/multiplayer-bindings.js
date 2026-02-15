@@ -1,7 +1,7 @@
-let peerJSMultiplayer = null;
+let simpleMultiplayer = null;
 
 document.addEventListener('DOMContentLoaded', function() {
-    console.log("联机系统加载中...");
+    console.log('SimpleMultiplayer 联机系统加载中...');
 
     const createRoomBtn = document.getElementById('create-room');
     const joinRoomBtn = document.getElementById('join-room');
@@ -9,54 +9,43 @@ document.addEventListener('DOMContentLoaded', function() {
     const startMultiplayerBtn = document.getElementById('start-multiplayer-game');
     const sendChatBtn = document.getElementById('send-chat');
     const chatInput = document.getElementById('chat-input');
-    const refreshRoomsBtn = document.getElementById('refresh-rooms');
-    const toggleReadyBtn = document.getElementById('toggle-ready');
+    const backFromMultiplayerBtn = document.getElementById('back-from-multiplayer');
+
+    if (!simpleMultiplayer) {
+        simpleMultiplayer = new SimpleMultiplayer(null);
+    }
 
     if (createRoomBtn) {
         createRoomBtn.addEventListener('click', async function() {
-            const roomName = document.getElementById('room-name')?.value || '我的房间';
-            const password = document.getElementById('room-password')?.value || '';
-            const maxPlayers = parseInt(document.getElementById('max-players')?.value || '4');
-            const aiCount = parseInt(document.getElementById('ai-count')?.value || '0');
             const playerName = document.getElementById('player-name')?.value || '玩家';
-
-            if (!peerJSMultiplayer) {
-                peerJSMultiplayer = new PeerJSMultiplayerManager(null);
-            }
-
-            const success = await peerJSMultiplayer.createRoom(roomName, password, maxPlayers, aiCount, playerName);
+            const success = await simpleMultiplayer.createRoom(playerName);
             if (success) {
-                showNotification('房间创建成功！房间ID: ' + peerJSMultiplayer.roomId, 'success');
+                console.log('房间创建成功');
             }
         });
     }
 
     if (joinRoomBtn) {
         joinRoomBtn.addEventListener('click', async function() {
-            const roomId = document.getElementById('room-id')?.value || '';
-            const password = document.getElementById('join-room-password')?.value || '';
+            const roomCode = document.getElementById('room-id')?.value || '';
             const playerName = document.getElementById('join-player-name')?.value || '玩家';
 
-            if (!roomId.trim()) {
-                alert('请输入房间ID');
+            if (!roomCode.trim()) {
+                alert('请输入房间码');
                 return;
             }
 
-            if (!peerJSMultiplayer) {
-                peerJSMultiplayer = new PeerJSMultiplayerManager(null);
-            }
-
-            const success = await peerJSMultiplayer.joinRoom(roomId, password, playerName);
+            const success = await simpleMultiplayer.joinRoom(roomCode, playerName);
             if (success) {
-                showNotification('正在加入房间...', 'info');
+                console.log('正在加入房间...');
             }
         });
     }
 
     if (leaveRoomBtn) {
         leaveRoomBtn.addEventListener('click', function() {
-            if (peerJSMultiplayer) {
-                peerJSMultiplayer.leaveRoom();
+            if (simpleMultiplayer) {
+                simpleMultiplayer.leaveRoom();
             }
             switchScreen('main-menu');
         });
@@ -64,16 +53,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (startMultiplayerBtn) {
         startMultiplayerBtn.addEventListener('click', function() {
-            if (peerJSMultiplayer) {
-                peerJSMultiplayer.startGame();
-            }
-        });
-    }
-
-    if (toggleReadyBtn) {
-        toggleReadyBtn.addEventListener('click', function() {
-            if (peerJSMultiplayer) {
-                peerJSMultiplayer.toggleReady();
+            if (simpleMultiplayer) {
+                simpleMultiplayer.startGame();
             }
         });
     }
@@ -81,8 +62,8 @@ document.addEventListener('DOMContentLoaded', function() {
     if (sendChatBtn && chatInput) {
         sendChatBtn.addEventListener('click', function() {
             const message = chatInput.value.trim();
-            if (message && peerJSMultiplayer) {
-                peerJSMultiplayer.sendChatMessage(message);
+            if (message && simpleMultiplayer) {
+                simpleMultiplayer.sendChatMessage(message);
                 chatInput.value = '';
             }
         });
@@ -94,21 +75,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    if (refreshRoomsBtn) {
-        refreshRoomsBtn.addEventListener('click', function() {
-            const roomsContainer = document.getElementById('public-rooms');
-            if (roomsContainer) {
-                roomsContainer.innerHTML = `
-                    <div class="room-empty">
-                        <p style="text-align: center; color: #a5b1c2; padding: 20px;">PeerJS 不支持公共房间列表</p>
-                        <p style="text-align: center; color: #778ca3; font-size: 14px;">请直接输入房间ID加入</p>
-                    </div>
-                `;
-            }
+    if (backFromMultiplayerBtn) {
+        backFromMultiplayerBtn.addEventListener('click', function() {
+            switchScreen('main-menu');
         });
     }
 
-    console.log("联机系统绑定完成！");
+    console.log('SimpleMultiplayer 联机系统绑定完成！');
 });
 
 function switchScreen(screenId) {
@@ -119,28 +92,4 @@ function switchScreen(screenId) {
     if (targetScreen) {
         targetScreen.classList.add('active');
     }
-}
-
-function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.textContent = message;
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 15px 25px;
-        border-radius: 8px;
-        color: white;
-        font-weight: 500;
-        z-index: 10000;
-        animation: slideIn 0.3s ease;
-        background: ${type === 'success' ? '#27ae60' : type === 'error' ? '#e74c3c' : '#3498db'};
-    `;
-    document.body.appendChild(notification);
-
-    setTimeout(() => {
-        notification.style.animation = 'slideOut 0.3s ease';
-        setTimeout(() => notification.remove(), 300);
-    }, 3000);
 }

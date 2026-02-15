@@ -91,7 +91,7 @@
         <div id="multiplayer-screen" class="screen">
             <div class="multiplayer-header">
                 <h2><i class="fas fa-users"></i> 多人联机对战</h2>
-                <p class="subtitle">与朋友一起游玩，或者加入随机房间</p>
+                <p class="subtitle">与朋友一起游玩</p>
             </div>
             
             <div class="multiplayer-content">
@@ -192,11 +192,8 @@
                     </div>
                     
                     <div class="form-group" style="margin-top: 20px;">
-                        <button id="toggle-ready" class="menu-btn" style="background: rgba(46, 204, 113, 0.2);">
-                            <i class="fas fa-check"></i> 准备
-                        </button>
                         <button id="start-multiplayer-game" class="menu-btn" disabled>
-                            <i class="fas fa-play"></i> 开始游戏
+                            <i class="fas fa-play"></i> 等待更多玩家...
                         </button>
                         <button id="leave-room" class="small-btn" style="background: rgba(231, 76, 60, 0.2); color: #e74c3c;">
                             <i class="fas fa-sign-out-alt"></i> 离开房间
@@ -1273,7 +1270,7 @@
 
     <!-- 将所有JavaScript代码内联到这里 -->
 
-    <script src="js/components/peerjs-multiplayer.js"></script>
+    <script src="js/components/simple-multiplayer.js"></script>
     <script src="js/components/multiplayer-bindings.js"></script>
     <script src="js/main.js"></script>
 </body>
