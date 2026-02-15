@@ -5,21 +5,24 @@
             box-sizing: border-box;
         }
 
-        html, body {
+        html {
+            scroll-behavior: smooth;
+            -webkit-text-size-adjust: 100%;
+        }
+
+        body {
             width: 100%;
-            height: 100%;
+            min-height: 100vh;
+            height: auto;
             overflow-x: hidden;
             overflow-y: auto;
             font-family: 'Noto Sans SC', sans-serif;
             font-size: 16px;
-            -webkit-overflow-scrolling: touch;
-            touch-action: pan-y;
-        }
-
-        body {
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             color: #fff;
             position: relative;
+            -webkit-overflow-scrolling: touch;
+            touch-action: pan-y manipulation;
         }
 
         /* 加载屏幕 */
@@ -6812,5 +6815,251 @@
             
             .card-effect {
                 font-size: 0.5rem;
+            }
+        }
+
+        /* ==================== 移动端全面滚动优化 ==================== */
+        @media (max-width: 768px) {
+            html {
+                overflow-y: scroll !important;
+            }
+            
+            body {
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                touch-action: pan-y !important;
+                position: static !important;
+            }
+            
+            .game-container {
+                position: relative !important;
+                overflow: visible !important;
+                height: auto !important;
+                min-height: 100vh !important;
+            }
+            
+            .screen {
+                position: relative !important;
+                overflow: visible !important;
+                height: auto !important;
+                min-height: 100vh !important;
+            }
+            
+            .screen.active {
+                display: flex !important;
+                flex-direction: column !important;
+            }
+            
+            /* 确保所有内容区域可滚动 */
+            .menu-content,
+            .settings-content,
+            .encyclopedia-content,
+            .account-content,
+            .ranked-content,
+            .achievement-content,
+            .tutorial-content,
+            .multiplayer-content {
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                height: auto !important;
+                min-height: auto !important;
+            }
+            
+            /* 修复固定元素 */
+            .loading-screen,
+            .landscape-prompt {
+                position: fixed !important;
+            }
+            
+            /* 移除阻止滚动的样式 */
+            .modal-content {
+                max-height: 90vh;
+                overflow-y: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+        }
+
+        /* ==================== 横屏模式全面优化 ==================== */
+        @media (max-width: 926px) and (orientation: landscape) and (max-height: 500px) {
+            html {
+                overflow-y: auto !important;
+            }
+            
+            body {
+                overflow-y: auto !important;
+                min-height: 100% !important;
+            }
+            
+            .game-container {
+                min-height: 100% !important;
+                height: auto !important;
+            }
+            
+            .screen {
+                min-height: 100% !important;
+                height: auto !important;
+                padding: 10px !important;
+            }
+            
+            /* 主菜单横屏优化 */
+            .menu-header {
+                margin: 5px 0 15px !important;
+                padding-top: 10px !important;
+            }
+            
+            .menu-header h1 {
+                font-size: 1.5rem !important;
+            }
+            
+            .menu-header p {
+                font-size: 0.8rem !important;
+            }
+            
+            .menu-buttons {
+                flex-direction: row !important;
+                flex-wrap: wrap !important;
+                justify-content: center !important;
+                gap: 10px !important;
+            }
+            
+            .menu-btn {
+                padding: 8px 16px !important;
+                font-size: 0.85rem !important;
+                min-width: 120px !important;
+            }
+            
+            /* 职业选择横屏优化 */
+            .class-selection {
+                flex-direction: row !important;
+                flex-wrap: wrap !important;
+                gap: 10px !important;
+                padding: 10px !important;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
+            
+            .class-card {
+                min-width: 150px !important;
+                max-width: 200px !important;
+                padding: 12px !important;
+            }
+            
+            .class-avatar {
+                width: 50px !important;
+                height: 50px !important;
+                font-size: 1.2rem !important;
+            }
+            
+            .class-name {
+                font-size: 0.9rem !important;
+            }
+            
+            .class-difficulty {
+                font-size: 0.7rem !important;
+            }
+            
+            /* 图鉴横屏优化 */
+            .encyclopedia-tabs {
+                flex-wrap: wrap !important;
+                gap: 5px !important;
+            }
+            
+            .encyclopedia-tab {
+                padding: 6px 12px !important;
+                font-size: 0.8rem !important;
+            }
+            
+            .encyclopedia-grid {
+                display: grid !important;
+                grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) !important;
+                gap: 8px !important;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+                max-height: calc(100vh - 100px) !important;
+            }
+            
+            /* 设置页面横屏优化 */
+            .settings-section {
+                margin-bottom: 10px !important;
+                padding: 10px !important;
+            }
+            
+            .settings-section h3 {
+                font-size: 0.9rem !important;
+            }
+            
+            /* 联机界面横屏优化 */
+            .multiplayer-container {
+                flex-direction: row !important;
+                gap: 10px !important;
+            }
+            
+            .room-form,
+            .room-list {
+                flex: 1 !important;
+                min-width: 200px !important;
+            }
+            
+            /* 游戏界面横屏优化 */
+            .game-area {
+                flex-direction: row !important;
+                height: auto !important;
+                min-height: 100vh !important;
+            }
+            
+            .opponents-area {
+                width: 25% !important;
+                min-width: 100px !important;
+                flex-direction: column !important;
+                overflow-y: auto !important;
+            }
+            
+            .center-area {
+                flex: 1 !important;
+            }
+            
+            .player-area {
+                flex-direction: row !important;
+                align-items: center !important;
+            }
+            
+            .hand-area {
+                flex: 1 !important;
+                min-height: 80px !important;
+            }
+            
+            .cards-container {
+                display: flex !important;
+                flex-wrap: wrap !important;
+                gap: 5px !important;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
+            }
+            
+            .card {
+                width: 60px !important;
+                height: 84px !important;
+            }
+            
+            .action-area {
+                position: fixed !important;
+                bottom: 5px !important;
+                right: 5px !important;
+                flex-direction: column !important;
+                gap: 5px !important;
+            }
+            
+            .action-btn {
+                padding: 6px 12px !important;
+                font-size: 0.75rem !important;
+            }
+            
+            /* 模态框横屏优化 */
+            .modal-content {
+                max-width: 90% !important;
+                max-height: 90vh !important;
+                margin: 5vh auto !important;
+                overflow-y: auto !important;
+                -webkit-overflow-scrolling: touch !important;
             }
         }
