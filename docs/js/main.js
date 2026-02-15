@@ -7868,13 +7868,21 @@
                 const humanPlayer = this.players.find(p => p.type === 'human');
                 if (!humanPlayer) return;
                 
+                // 排序前清空选中状态，避免索引失效
+                this.selectedCards = [];
+                
                 // 自动按名称排序手牌（支持中文）
                 humanPlayer.hand.sort((a, b) => {
-                    if (a.name !== b.name) {
-                        return a.name.localeCompare(b.name, 'zh-CN');
+                    // 首先按名称排序
+                    const nameCompare = a.name.localeCompare(b.name, 'zh-CN');
+                    if (nameCompare !== 0) {
+                        return nameCompare;
                     }
-                    const suitOrder = { 'stone': 0, 'scissors': 1, 'cloth': 2 };
-                    return (suitOrder[a.type] || 999) - (suitOrder[b.type] || 999);
+                    // 同名卡牌按花色排序
+                    const suitOrder = { 'stone': 0, 'scissors': 1, 'cloth': 2, 'item': 3 };
+                    const aSuit = suitOrder[a.type] ?? 999;
+                    const bSuit = suitOrder[b.type] ?? 999;
+                    return aSuit - bSuit;
                 });
                 
                 const cardsContainer = document.querySelector('.cards-container');
