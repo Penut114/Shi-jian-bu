@@ -1,0 +1,460 @@
+class PeerJSMultiplayerManager {
+    constructor(gameManager) {
+        this.gameManager = gameManager;
+        this.peer = null;
+        this.connections = new Map();
+        this.localPeerId = null;
+        this.roomId = null;
+        this.isHost = false;
+        this.players = new Map();
+        this.playerName = "玩家";
+        this.roomName = "";
+        this.roomPassword = "";
+        this.maxPlayers = 4;
+        this.aiCount = 0;
+        
+        this.init();
+    }
+
+    init() {
+        console.log("初始化 PeerJS 联机系统");
+        
+        const savedName = localStorage.getItem('playerName');
+        if (savedName) {
+            this.playerName = savedName;
+            const nameInput = document.getElementById('player-name');
+            const joinNameInput = document.getElementById('join-player-name');
+            if (nameInput) nameInput.value = savedName;
+            if (joinNameInput) joinNameInput.value = savedName;
+        }
+    }
+
+    generateRoomId() {
+        return Math.random().toString(36).substring(2, 8).toUpperCase();
+    }
+
+    async createRoom(roomName, password = "", maxPlayers = 4, aiCount = 0, playerName = "玩家") {
+        return new Promise((resolve) => {
+            try {
+                this.isHost = true;
+                this.roomId = this.generateRoomId();
+                this.roomName = roomName;
+                this.roomPassword = password;
+                this.maxPlayers = maxPlayers;
+                this.aiCount = aiCount;
+                
+                this.playerName = playerName || document.getElementById('player-name')?.value || "玩家";
+                localStorage.setItem('playerName', this.playerName);
+
+                this.peer = new Peer(this.roomId + '_host', {
+                    debug: 2
+                });
+
+                this.peer.on('open', (id) => {
+                    this.localPeerId = id;
+                    console.log("PeerJS 连接成功，房间 ID:", this.roomId);
+                    
+                    this.players.set(this.localPeerId, {
+                        id: this.localPeerId,
+                        name: this.playerName,
+                        isHost: true,
+                        isReady: true,
+                        class: null
+                    });
+
+                    for (let i = 0; i < aiCount; i++) {
+                        const aiId = 'ai_' + Math.random().toString(36).substring(2, 10);
+                        this.players.set(aiId, {
+                            id: aiId,
+                            name: `AI${i + 1}`,
+                            isHost: false,
+                            isReady: true,
+                            class: null,
+                            isAI: true
+                        });
+                    }
+
+                    this.peer.on('connection', (conn) => {
+                        console.log("新玩家连接:", conn.peer);
+                        this.handleIncomingConnection(conn);
+                    });
+
+                    this.showNotification("房间创建成功！房间 ID: " + this.roomId, "success");
+                    this.updateRoomUI();
+                    this.updatePlayerList();
+                    
+                    resolve(true);
+                });
+
+                this.peer.on('error', (err) => {
+                    console.error("PeerJS 错误:", err);
+                    this.showNotification("创建房间失败: " + err.type, "error");
+                    resolve(false);
+                });
+
+            } catch (error) {
+                console.error("创建房间失败:", error);
+                this.showNotification("创建房间失败", "error");
+                resolve(false);
+            }
+        });
+    }
+
+    handleIncomingConnection(conn) {
+        conn.on('open', () => {
+            console.log("与玩家建立连接:", conn.peer);
+            this.connections.set(conn.peer, conn);
+            this.setupConnectionHandlers(conn);
+        });
+    }
+
+    setupConnectionHandlers(conn) {
+        conn.on('data', (data) => {
+            this.handleMessage(data, conn.peer);
+        });
+
+        conn.on('close', () => {
+            console.log("玩家断开连接:", conn.peer);
+            this.connections.delete(conn.peer);
+            this.players.delete(conn.peer);
+            this.updatePlayerList();
+            this.broadcast({
+                type: 'playerLeft',
+                playerId: conn.peer
+            });
+        });
+
+        conn.on('error', (err) => {
+            console.error("连接错误:", err);
+        });
+    }
+
+    async joinRoom(roomId, password = "", playerName = "玩家") {
+        return new Promise((resolve) => {
+            try {
+                this.isHost = false;
+                this.roomId = roomId.toUpperCase();
+                
+                this.playerName = playerName || document.getElementById('join-player-name')?.value || "玩家";
+                localStorage.setItem('playerName', this.playerName);
+
+                this.peer = new Peer(undefined, {
+                    debug: 2
+                });
+
+                this.peer.on('open', (id) => {
+                    this.localPeerId = id;
+                    console.log("PeerJS 连接成功，准备加入房间:", this.roomId);
+
+                    const hostId = this.roomId + '_host';
+                    const conn = this.peer.connect(hostId);
+
+                    conn.on('open', () => {
+                        console.log("成功连接到房主");
+                        this.connections.set(hostId, conn);
+                        this.setupConnectionHandlers(conn);
+
+                        conn.send({
+                            type: 'joinRequest',
+                            playerId: this.localPeerId,
+                            playerName: this.playerName,
+                            password: password
+                        });
+
+                        resolve(true);
+                    });
+
+                    conn.on('error', (err) => {
+                        console.error("连接失败:", err);
+                        this.showNotification("无法连接到房间", "error");
+                        resolve(false);
+                    });
+                });
+
+                this.peer.on('error', (err) => {
+                    console.error("PeerJS 错误:", err);
+                    this.showNotification("连接失败: " + err.type, "error");
+                    resolve(false);
+                });
+
+            } catch (error) {
+                console.error("加入房间失败:", error);
+                this.showNotification("加入房间失败", "error");
+                resolve(false);
+            }
+        });
+    }
+
+    handleMessage(data, senderId) {
+        console.log("收到消息:", data.type, "来自:", senderId);
+
+        switch (data.type) {
+            case 'joinRequest':
+                this.handleJoinRequest(data, senderId);
+                break;
+            case 'joinAccepted':
+                this.handleJoinAccepted(data);
+                break;
+            case 'playerJoined':
+                this.handlePlayerJoined(data);
+                break;
+            case 'playerLeft':
+                this.handlePlayerLeft(data);
+                break;
+            case 'roomState':
+                this.handleRoomState(data);
+                break;
+            case 'chatMessage':
+                this.handleChatMessage(data);
+                break;
+            case 'gameStart':
+                this.handleGameStart(data);
+                break;
+        }
+    }
+
+    handleJoinRequest(data, senderId) {
+        if (!this.isHost) return;
+
+        if (this.players.size >= this.maxPlayers) {
+            const conn = this.connections.get(senderId);
+            if (conn) {
+                conn.send({
+                    type: 'joinRejected',
+                    reason: '房间已满'
+                });
+            }
+            return;
+        }
+
+        if (this.roomPassword && data.password !== this.roomPassword) {
+            const conn = this.connections.get(senderId);
+            if (conn) {
+                conn.send({
+                    type: 'joinRejected',
+                    reason: '密码错误'
+                });
+            }
+            return;
+        }
+
+        const newPlayer = {
+            id: data.playerId,
+            name: data.playerName,
+            isHost: false,
+            isReady: true,
+            class: null
+        };
+
+        this.players.set(data.playerId, newPlayer);
+
+        const conn = this.connections.get(senderId);
+        if (conn) {
+            conn.send({
+                type: 'joinAccepted',
+                roomName: this.roomName,
+                players: Array.from(this.players.values()),
+                roomId: this.roomId
+            });
+        }
+
+        this.broadcast({
+            type: 'playerJoined',
+            player: newPlayer
+        });
+
+        this.updatePlayerList();
+        this.showNotification(data.playerName + " 加入了房间", "info");
+    }
+
+    handleJoinAccepted(data) {
+        this.roomName = data.roomName;
+        this.players.clear();
+        data.players.forEach(player => {
+            this.players.set(player.id, player);
+        });
+
+        this.updateRoomUI();
+        this.updatePlayerList();
+        this.showNotification("成功加入房间: " + this.roomName, "success");
+    }
+
+    handlePlayerJoined(data) {
+        this.players.set(data.player.id, data.player);
+        this.updatePlayerList();
+        this.showNotification(data.player.name + " 加入了房间", "info");
+    }
+
+    handlePlayerLeft(data) {
+        this.players.delete(data.playerId);
+        this.updatePlayerList();
+    }
+
+    handleRoomState(data) {
+        this.players.clear();
+        data.players.forEach(player => {
+            this.players.set(player.id, player);
+        });
+        this.updatePlayerList();
+    }
+
+    handleChatMessage(data) {
+        this.addChatMessage(data.playerName, data.message, data.isSystem);
+    }
+
+    handleGameStart(data) {
+        this.showNotification("游戏开始！", "success");
+        if (this.gameManager) {
+            this.gameManager.isMultiplayer = true;
+            this.gameManager.multiplayerManager = this;
+        }
+    }
+
+    broadcast(data) {
+        this.connections.forEach((conn) => {
+            try {
+                conn.send(data);
+            } catch (e) {
+                console.error("发送消息失败:", e);
+            }
+        });
+    }
+
+    sendToHost(data) {
+        const hostId = this.roomId + '_host';
+        const conn = this.connections.get(hostId);
+        if (conn) {
+            conn.send(data);
+        }
+    }
+
+    sendChatMessage(message) {
+        const chatData = {
+            type: 'chatMessage',
+            playerId: this.localPeerId,
+            playerName: this.playerName,
+            message: message,
+            isSystem: false
+        };
+
+        this.addChatMessage(this.playerName, message, false);
+        
+        if (this.isHost) {
+            this.broadcast(chatData);
+        } else {
+            this.sendToHost(chatData);
+        }
+    }
+
+    addChatMessage(playerName, message, isSystem = false) {
+        const messagesContainer = document.getElementById('room-chat-messages');
+        if (!messagesContainer) return;
+
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'chat-message' + (isSystem ? ' system' : '');
+        messageDiv.innerHTML = `<strong>${playerName}:</strong> ${message}`;
+        messagesContainer.appendChild(messageDiv);
+        messagesContainer.scrollTop = messagesContainer.scrollHeight;
+    }
+
+    updateRoomUI() {
+        const roomIdDisplay = document.getElementById('current-room-id');
+        if (roomIdDisplay) {
+            roomIdDisplay.textContent = this.roomId || '-';
+        }
+
+        const roomNameDisplay = document.getElementById('current-room-name');
+        if (roomNameDisplay) {
+            roomNameDisplay.textContent = this.roomName || '-';
+        }
+    }
+
+    updatePlayerList() {
+        const playerListContainer = document.getElementById('room-players');
+        if (!playerListContainer) return;
+
+        playerListContainer.innerHTML = '';
+        
+        this.players.forEach((player) => {
+            const playerDiv = document.createElement('div');
+            playerDiv.className = 'player-list-item';
+            playerDiv.innerHTML = `
+                <div class="player-avatar-small">${player.isAI ? '🤖' : '👤'}</div>
+                <span>${player.name}${player.isHost ? ' 👑' : ''}</span>
+            `;
+            playerListContainer.appendChild(playerDiv);
+        });
+
+        this.updateStartButton();
+    }
+
+    updateStartButton() {
+        const startButton = document.getElementById('start-multiplayer-game');
+        if (!startButton) return;
+        startButton.disabled = !this.isHost;
+    }
+
+    leaveRoom() {
+        this.connections.forEach((conn) => {
+            conn.close();
+        });
+        this.connections.clear();
+        this.players.clear();
+        
+        if (this.peer) {
+            this.peer.destroy();
+            this.peer = null;
+        }
+
+        this.roomId = null;
+        this.isHost = false;
+        this.showNotification("已离开房间", "info");
+    }
+
+    startGame() {
+        if (!this.isHost) return;
+
+        this.broadcast({
+            type: 'gameStart'
+        });
+
+        this.handleGameStart({});
+    }
+
+    showNotification(message, type = "info") {
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 25px;
+            border-radius: 8px;
+            color: white;
+            font-weight: 500;
+            z-index: 10000;
+            animation: slideIn 0.3s ease;
+            background: ${type === 'success' ? '#27ae60' : type === 'error' ? '#e74c3c' : '#3498db'};
+        `;
+        document.body.appendChild(notification);
+
+        setTimeout(() => {
+            notification.style.animation = 'slideOut 0.3s ease';
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }
+}
+
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    @keyframes slideOut {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+`;
+document.head.appendChild(style);
