@@ -58,7 +58,7 @@ class PeerJSMultiplayerManager {
                         id: this.localPeerId,
                         name: this.playerName,
                         isHost: true,
-                        isReady: true,
+                        isReady: false,
                         class: null
                     });
 
@@ -116,12 +116,15 @@ class PeerJSMultiplayerManager {
         conn.on('close', () => {
             console.log("玩家断开连接:", conn.peer);
             this.connections.delete(conn.peer);
-            this.players.delete(conn.peer);
-            this.updatePlayerList();
-            this.broadcast({
-                type: 'playerLeft',
-                playerId: conn.peer
-            });
+            const player = this.players.get(conn.peer);
+            if (player && !player.isAI) {
+                this.players.delete(conn.peer);
+                this.updatePlayerList();
+                this.broadcast({
+                    type: 'playerLeft',
+                    playerId: conn.peer
+                });
+            }
         });
 
         conn.on('error', (err) => {
@@ -195,6 +198,9 @@ class PeerJSMultiplayerManager {
             case 'joinAccepted':
                 this.handleJoinAccepted(data);
                 break;
+            case 'joinRejected':
+                this.handleJoinRejected(data);
+                break;
             case 'playerJoined':
                 this.handlePlayerJoined(data);
                 break;
@@ -206,6 +212,9 @@ class PeerJSMultiplayerManager {
                 break;
             case 'chatMessage':
                 this.handleChatMessage(data);
+                break;
+            case 'playerReady':
+                this.handlePlayerReady(data);
                 break;
             case 'gameStart':
                 this.handleGameStart(data);
@@ -242,7 +251,7 @@ class PeerJSMultiplayerManager {
             id: data.playerId,
             name: data.playerName,
             isHost: false,
-            isReady: true,
+            isReady: false,
             class: null
         };
 
@@ -279,6 +288,11 @@ class PeerJSMultiplayerManager {
         this.showNotification("成功加入房间: " + this.roomName, "success");
     }
 
+    handleJoinRejected(data) {
+        this.showNotification("加入失败: " + data.reason, "error");
+        this.leaveRoom();
+    }
+
     handlePlayerJoined(data) {
         this.players.set(data.player.id, data.player);
         this.updatePlayerList();
@@ -302,11 +316,23 @@ class PeerJSMultiplayerManager {
         this.addChatMessage(data.playerName, data.message, data.isSystem);
     }
 
+    handlePlayerReady(data) {
+        const player = this.players.get(data.playerId);
+        if (player) {
+            player.isReady = data.isReady;
+            this.updatePlayerList();
+        }
+    }
+
     handleGameStart(data) {
         this.showNotification("游戏开始！", "success");
         if (this.gameManager) {
             this.gameManager.isMultiplayer = true;
             this.gameManager.multiplayerManager = this;
+        }
+        
+        if (typeof switchScreen === 'function') {
+            switchScreen('class-selection-screen');
         }
     }
 
@@ -346,6 +372,30 @@ class PeerJSMultiplayerManager {
         }
     }
 
+    toggleReady() {
+        const localPlayer = this.players.get(this.localPeerId);
+        if (localPlayer) {
+            localPlayer.isReady = !localPlayer.isReady;
+            this.updatePlayerList();
+            
+            const status = localPlayer.isReady ? '已准备' : '取消准备';
+            this.addChatMessage('系统', `${this.playerName} ${status}`, true);
+            this.showNotification(`你已${status}`, 'info');
+            
+            const readyData = {
+                type: 'playerReady',
+                playerId: this.localPeerId,
+                isReady: localPlayer.isReady
+            };
+            
+            if (this.isHost) {
+                this.broadcast(readyData);
+            } else {
+                this.sendToHost(readyData);
+            }
+        }
+    }
+
     addChatMessage(playerName, message, isSystem = false) {
         const messagesContainer = document.getElementById('room-chat-messages');
         if (!messagesContainer) return;
@@ -358,14 +408,14 @@ class PeerJSMultiplayerManager {
     }
 
     updateRoomUI() {
-        const roomIdDisplay = document.getElementById('current-room-id');
+        const roomIdDisplay = document.getElementById('room-id-display');
         if (roomIdDisplay) {
             roomIdDisplay.textContent = this.roomId || '-';
         }
-
-        const roomNameDisplay = document.getElementById('current-room-name');
-        if (roomNameDisplay) {
-            roomNameDisplay.textContent = this.roomName || '-';
+        
+        const roomIdInput = document.getElementById('room-id');
+        if (roomIdInput) {
+            roomIdInput.value = this.roomId || '';
         }
     }
 
@@ -378,20 +428,81 @@ class PeerJSMultiplayerManager {
         this.players.forEach((player) => {
             const playerDiv = document.createElement('div');
             playerDiv.className = 'player-list-item';
+            
+            const isLocalPlayer = player.id === this.localPeerId;
+            
             playerDiv.innerHTML = `
                 <div class="player-avatar-small">${player.isAI ? '🤖' : '👤'}</div>
-                <span>${player.name}${player.isHost ? ' 👑' : ''}</span>
+                <div style="flex: 1;">
+                    <div style="font-weight: bold;">${player.name} ${player.isHost ? '👑' : ''} ${isLocalPlayer ? '(你)' : ''}</div>
+                    <div style="font-size: 0.8rem; color: #a5b1c2;">
+                        ${player.isReady ? '✓ 已准备' : '✗ 未准备'}
+                    </div>
+                </div>
             `;
             playerListContainer.appendChild(playerDiv);
         });
 
         this.updateStartButton();
+        this.updateReadyButton();
     }
 
     updateStartButton() {
         const startButton = document.getElementById('start-multiplayer-game');
         if (!startButton) return;
-        startButton.disabled = !this.isHost;
+        
+        if (!this.isHost) {
+            startButton.disabled = true;
+            startButton.innerHTML = '<i class="fas fa-play"></i> 等待房主开始';
+            return;
+        }
+        
+        let allReady = true;
+        let playerCount = 0;
+        
+        this.players.forEach(player => {
+            playerCount++;
+            if (!player.isReady && !player.isAI) {
+                allReady = false;
+            }
+        });
+        
+        if (playerCount < 2) {
+            startButton.innerHTML = '<i class="fas fa-play"></i> 等待更多玩家...';
+            startButton.disabled = true;
+        } else if (allReady) {
+            startButton.innerHTML = '<i class="fas fa-play"></i> 开始游戏';
+            startButton.disabled = false;
+        } else {
+            startButton.innerHTML = '<i class="fas fa-play"></i> 等待玩家准备...';
+            startButton.disabled = true;
+        }
+    }
+
+    updateReadyButton() {
+        const readyButton = document.getElementById('toggle-ready');
+        if (!readyButton) return;
+        
+        const localPlayer = this.players.get(this.localPeerId);
+        if (!localPlayer) {
+            readyButton.style.display = 'none';
+            return;
+        }
+        
+        if (localPlayer.isAI) {
+            readyButton.style.display = 'none';
+            return;
+        }
+        
+        readyButton.style.display = 'block';
+        
+        if (localPlayer.isReady) {
+            readyButton.innerHTML = '<i class="fas fa-times"></i> 取消准备';
+            readyButton.style.background = 'rgba(231, 76, 60, 0.2)';
+        } else {
+            readyButton.innerHTML = '<i class="fas fa-check"></i> 准备';
+            readyButton.style.background = 'rgba(46, 204, 113, 0.2)';
+        }
     }
 
     leaveRoom() {
@@ -413,6 +524,26 @@ class PeerJSMultiplayerManager {
 
     startGame() {
         if (!this.isHost) return;
+
+        let allReady = true;
+        let playerCount = 0;
+        
+        this.players.forEach(player => {
+            playerCount++;
+            if (!player.isReady && !player.isAI) {
+                allReady = false;
+            }
+        });
+        
+        if (playerCount < 2) {
+            this.showNotification('至少需要2名玩家才能开始游戏', 'error');
+            return;
+        }
+        
+        if (!allReady) {
+            this.showNotification('请等待所有玩家准备就绪', 'error');
+            return;
+        }
 
         this.broadcast({
             type: 'gameStart'

@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const sendChatBtn = document.getElementById('send-chat');
     const chatInput = document.getElementById('chat-input');
     const refreshRoomsBtn = document.getElementById('refresh-rooms');
+    const toggleReadyBtn = document.getElementById('toggle-ready');
 
     if (createRoomBtn) {
         createRoomBtn.addEventListener('click', async function() {
@@ -25,7 +26,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const success = await peerJSMultiplayer.createRoom(roomName, password, maxPlayers, aiCount, playerName);
             if (success) {
-                switchScreen('multiplayer-room-screen');
+                showNotification('房间创建成功！房间ID: ' + peerJSMultiplayer.roomId, 'success');
             }
         });
     }
@@ -47,7 +48,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const success = await peerJSMultiplayer.joinRoom(roomId, password, playerName);
             if (success) {
-                switchScreen('multiplayer-room-screen');
+                showNotification('正在加入房间...', 'info');
             }
         });
     }
@@ -65,6 +66,14 @@ document.addEventListener('DOMContentLoaded', function() {
         startMultiplayerBtn.addEventListener('click', function() {
             if (peerJSMultiplayer) {
                 peerJSMultiplayer.startGame();
+            }
+        });
+    }
+
+    if (toggleReadyBtn) {
+        toggleReadyBtn.addEventListener('click', function() {
+            if (peerJSMultiplayer) {
+                peerJSMultiplayer.toggleReady();
             }
         });
     }
@@ -110,4 +119,28 @@ function switchScreen(screenId) {
     if (targetScreen) {
         targetScreen.classList.add('active');
     }
+}
+
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 25px;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        z-index: 10000;
+        animation: slideIn 0.3s ease;
+        background: ${type === 'success' ? '#27ae60' : type === 'error' ? '#e74c3c' : '#3498db'};
+    `;
+    document.body.appendChild(notification);
+
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
 }
