@@ -1272,15 +1272,40 @@
         </div>
 
         <div id="rogue-screen-gameover" class="screen hidden">
-            <h1 style="color:red">你 输 了</h1>
-            <p id="rogue-death-reason">死于贪婪</p>
-            <button class="btn btn-red" onclick="restartRogueGame()">重新开始</button>
+            <h1 style="color:red; font-size: 3em; text-shadow: 0 0 20px rgba(255,0,0,0.5);">游戏结束</h1>
+            <p id="rogue-death-reason" style="font-size: 1.2em; margin: 20px 0;">死于贪婪</p>
+            <div id="rogue-gameover-stats" style="background: rgba(0,0,0,0.5); padding: 20px; border-radius: 10px; margin: 20px 0; text-align: left; max-width: 400px;">
+                <h3 style="text-align: center; margin-bottom: 15px; color: var(--gold);">游戏统计</h3>
+                <p>到达楼层: <span id="gameover-floor">1</span> 层</p>
+                <p>击杀敌人: <span id="gameover-kills">0</span> 个</p>
+                <p>收集金币: <span id="gameover-gold">0</span> 枚</p>
+                <p>击败BOSS: <span id="gameover-bosses">0</span> 个</p>
+                <p>造成伤害: <span id="gameover-damage">0</span> 点</p>
+                <p>治疗生命: <span id="gameover-healing">0</span> 点</p>
+            </div>
+            <div style="display: flex; gap: 20px; justify-content: center;">
+                <button class="btn btn-red" onclick="restartRogueGame()">重新开始</button>
+                <button class="btn" onclick="returnToRogueMain()">返回主菜单</button>
+            </div>
         </div>
 
         <div id="rogue-screen-win" class="screen hidden">
-            <h1 style="color:gold">通 关 !</h1>
-            <p>你成为了这场赌局的唯一赢家。</p>
-            <button class="btn" onclick="restartRogueGame()">再来一局</button>
+            <h1 style="color:gold; font-size: 3em; text-shadow: 0 0 30px rgba(255,215,0,0.7);">🎉 通 关 ! 🎉</h1>
+            <p style="font-size: 1.3em; margin: 20px 0;">恭喜！你成为了这场赌局的唯一赢家！</p>
+            <div id="rogue-win-stats" style="background: rgba(0,0,0,0.5); padding: 20px; border-radius: 10px; margin: 20px 0; text-align: left; max-width: 400px;">
+                <h3 style="text-align: center; margin-bottom: 15px; color: var(--gold);">通关统计</h3>
+                <p>总楼层数: <span id="win-floor">10</span> 层</p>
+                <p>击杀敌人: <span id="win-kills">0</span> 个</p>
+                <p>收集金币: <span id="win-gold">0</span> 枚</p>
+                <p>击败BOSS: <span id="win-bosses">0</span> 个</p>
+                <p>造成伤害: <span id="win-damage">0</span> 点</p>
+                <p>治疗生命: <span id="win-healing">0</span> 点</p>
+                <p>使用职业: <span id="win-class">战士</span></p>
+            </div>
+            <div style="display: flex; gap: 20px; justify-content: center;">
+                <button class="btn" onclick="restartRogueGame()">再来一局</button>
+                <button class="btn" onclick="returnToRogueMain()">返回主菜单</button>
+            </div>
         </div>
     </div>
 

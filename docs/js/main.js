@@ -13344,20 +13344,15 @@
                     rogueState.currentRoom.completed = true;
                 }
                 
-                let rewardGold = rogueRandInt(15, 30);
-                
-                // 应用诅咒效果到金币获取
-                rewardGold = Math.floor(applyCurseEffects(rewardGold, 'gold_gain'));
-                rewardGold = Math.max(1, rewardGold);
-                
-                document.getElementById('rogue-reward-gold').innerText = rewardGold;
-                rogueState.player.gold += rewardGold;
-                rogueState.player.hp = Math.min(rogueState.player.hp + 10, rogueState.player.maxHp);
-                
                 // 记录统计信息
                 rogueState.gameStats.totalKills++;
-                rogueState.gameStats.totalGold += rewardGold;
-                rogueState.gameStats.totalHealing += 10;
+                
+                // 如果是BOSS敌人，增加BOSS击杀统计
+                if (rogueState.enemy.isBoss) {
+                    rogueState.gameStats.totalBossesDefeated++;
+                    rogueState.progress.bossesDefeated++;
+                    rogueLog(`击败了BOSS: ${rogueState.enemy.name}!`);
+                }
                 
                 // 应用敌人死亡时的遗物效果
                 applyRelicEffects(0, 'enemy_killed');
@@ -13371,6 +13366,46 @@
                 // 检查声望
                 checkReputation('enemy_killed');
                 
+                // 检查是否是第10层的最终BOSS
+                if (rogueState.floor === 10 && rogueState.enemy.isBoss) {
+                    // 击败最终BOSS，直接显示胜利界面
+                    soundManager.playVictorySound();
+                    soundManager.playButtonSound('reward');
+                    rogueLog('恭喜！你击败了最终BOSS！');
+                    updateWinStats();
+                    switchScreen('rogue-screen-win');
+                    return;
+                }
+                
+                // 检查是否是每5层的BOSS房间
+                if (rogueState.currentRoom && rogueState.currentRoom.type === ROGUE_ROOM_TYPES.BOSS) {
+                    // 击败BOSS后，检查是否所有房间都完成了
+                    const allRoomsCompleted = rogueState.rooms.every(room => room.completed);
+                    if (allRoomsCompleted) {
+                        // 所有房间完成，进入下一层
+                        rogueState.floor++;
+                        if (rogueState.floor > 10) {
+                            soundManager.playVictorySound();
+                            updateWinStats();
+                            switchScreen('rogue-screen-win');
+                            return;
+                        }
+                    }
+                }
+                
+                let rewardGold = rogueRandInt(15, 30);
+                
+                // 应用诅咒效果到金币获取
+                rewardGold = Math.floor(applyCurseEffects(rewardGold, 'gold_gain'));
+                rewardGold = Math.max(1, rewardGold);
+                
+                document.getElementById('rogue-reward-gold').innerText = rewardGold;
+                rogueState.player.gold += rewardGold;
+                rogueState.player.hp = Math.min(rogueState.player.hp + 10, rogueState.player.maxHp);
+                
+                rogueState.gameStats.totalGold += rewardGold;
+                rogueState.gameStats.totalHealing += 10;
+                
                 soundManager.playVictorySound();
                 soundManager.playButtonSound('reward');
                 
@@ -13379,16 +13414,54 @@
         }
 
         function rogueCheckDeath() {
+            console.log('检查死亡状态, 当前HP:', rogueState.player.hp);
+            
             if (rogueState.player.hp <= 0) {
-                if (rogueState.player.buffs['survive']) {
+                // 检查是否有复活效果
+                if (rogueState.player.buffs && rogueState.player.buffs['survive']) {
                     rogueState.player.hp = 1;
                     rogueState.player.buffs['survive'] = false;
                     rogueLog("绿帽生效！你苟活了下来！");
                     rogueRenderHand();
+                    rogueUpdateUI();
                     return;
                 }
+                
+                // 检查遗物复活效果
+                const hasRelicRevive = rogueState.player.relics && rogueState.player.relics.some(r => r.id === 'phoenix_feather');
+                if (hasRelicRevive && !rogueState.player.usedPhoenixFeather) {
+                    rogueState.player.hp = Math.floor(rogueState.player.maxHp * 0.3);
+                    rogueState.player.usedPhoenixFeather = true;
+                    rogueLog("凤凰羽毛生效！你复活了！");
+                    rogueRenderHand();
+                    rogueUpdateUI();
+                    return;
+                }
+                
+                // 确保HP不为负数
+                rogueState.player.hp = 0;
+                
+                // 更新死亡原因
+                const deathReason = document.getElementById('rogue-death-reason');
+                if (deathReason) {
+                    deathReason.innerText = `被 ${rogueState.enemy ? rogueState.enemy.name : '未知敌人'} 击败`;
+                }
+                
+                // 记录游戏统计
+                rogueLog(`游戏结束！到达第 ${rogueState.floor} 层，击杀 ${rogueState.player.kills} 个敌人`);
+                
                 soundManager.playDefeatSound();
-                switchScreen('rogue-screen-gameover');
+                
+                // 清除当前敌人状态
+                rogueState.enemy = null;
+                
+                // 更新游戏结束统计
+                updateGameOverStats();
+                
+                // 切换到游戏结束界面
+                setTimeout(() => {
+                    switchScreen('rogue-screen-gameover');
+                }, 500);
             }
         }
 
@@ -14016,6 +14089,7 @@
             
             rogueState.floor++;
             if (rogueState.floor > 10) {
+                updateWinStats();
                 switchScreen('rogue-screen-win');
                 return;
             }
@@ -14035,6 +14109,44 @@
             location.reload();
         }
         
+        function returnToRogueMain() {
+            // 重置游戏状态
+            rogueState.gameStarted = false;
+            rogueState.enemy = null;
+            rogueState.floor = 1;
+            
+            // 返回肉鸽模式主界面
+            switchScreen('rogue-screen-main');
+        }
+        
+        function updateGameOverStats() {
+            document.getElementById('gameover-floor').innerText = rogueState.floor;
+            document.getElementById('gameover-kills').innerText = rogueState.player.kills || 0;
+            document.getElementById('gameover-gold').innerText = rogueState.gameStats.totalGold || 0;
+            document.getElementById('gameover-bosses').innerText = rogueState.gameStats.totalBossesDefeated || 0;
+            document.getElementById('gameover-damage').innerText = rogueState.gameStats.totalDamage || 0;
+            document.getElementById('gameover-healing').innerText = rogueState.gameStats.totalHealing || 0;
+        }
+        
+        function updateWinStats() {
+            document.getElementById('win-floor').innerText = rogueState.floor;
+            document.getElementById('win-kills').innerText = rogueState.player.kills || 0;
+            document.getElementById('win-gold').innerText = rogueState.gameStats.totalGold || 0;
+            document.getElementById('win-bosses').innerText = rogueState.gameStats.totalBossesDefeated || 0;
+            document.getElementById('win-damage').innerText = rogueState.gameStats.totalDamage || 0;
+            document.getElementById('win-healing').innerText = rogueState.gameStats.totalHealing || 0;
+            
+            // 显示职业名称
+            const classNames = {
+                'soldier': '战士',
+                'mage': '法师',
+                'rogue': '盗贼',
+                'priest': '牧师',
+                'ranger': '游侠'
+            };
+            document.getElementById('win-class').innerText = classNames[rogueState.player.class] || rogueState.player.class;
+        }
+        
         function rogueReturnToMap() {
             document.getElementById('rogue-screen-reward').classList.add('hidden');
             rogueShowMap();
@@ -14049,6 +14161,7 @@
             if (confirm('确定要跳过当前楼层吗？这将直接进入下一层。')) {
                 rogueState.floor++;
                 if (rogueState.floor > 10) {
+                    updateWinStats();
                     switchScreen('rogue-screen-win');
                     return;
                 }
