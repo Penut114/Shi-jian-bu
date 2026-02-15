@@ -11,6 +11,18 @@
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 </head>
 <body>
+    <!-- 横屏提示 -->
+    <div id="landscape-prompt" class="landscape-prompt" style="display: none;">
+        <div class="landscape-content">
+            <i class="fas fa-mobile-alt fa-rotate-90"></i>
+            <h2>请横屏游玩</h2>
+            <p>为了获得最佳游戏体验，请将设备横置</p>
+            <button id="dismiss-landscape" class="menu-btn" style="margin-top: 20px;">
+                <i class="fas fa-check"></i> 继续游戏
+            </button>
+        </div>
+    </div>
+    
     <!-- 加载屏幕 -->
     <div id="loading-screen" class="loading-screen">
         <div class="loader"></div>

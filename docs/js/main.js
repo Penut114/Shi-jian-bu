@@ -7868,6 +7868,15 @@
                 const humanPlayer = this.players.find(p => p.type === 'human');
                 if (!humanPlayer) return;
                 
+                // 自动按名称排序手牌（支持中文）
+                humanPlayer.hand.sort((a, b) => {
+                    if (a.name !== b.name) {
+                        return a.name.localeCompare(b.name, 'zh-CN');
+                    }
+                    const suitOrder = { 'stone': 0, 'scissors': 1, 'cloth': 2 };
+                    return (suitOrder[a.type] || 999) - (suitOrder[b.type] || 999);
+                });
+                
                 const cardsContainer = document.querySelector('.cards-container');
                 if (!cardsContainer) return;
                 
@@ -14076,7 +14085,37 @@
             soundManager.playButtonSound();
         }
 
-
+        // ==================== 横屏检测功能 ====================
+        function checkOrientation() {
+            const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+            const isPortrait = window.innerHeight > window.innerWidth;
+            const landscapePrompt = document.getElementById('landscape-prompt');
+            
+            if (isMobile && isPortrait && landscapePrompt) {
+                landscapePrompt.style.display = 'flex';
+            } else if (landscapePrompt) {
+                landscapePrompt.style.display = 'none';
+            }
+        }
+        
+        // 初始化横屏检测
+        window.addEventListener('resize', checkOrientation);
+        window.addEventListener('orientationchange', checkOrientation);
+        
+        // 点击继续按钮关闭提示
+        document.addEventListener('DOMContentLoaded', function() {
+            const dismissBtn = document.getElementById('dismiss-landscape');
+            if (dismissBtn) {
+                dismissBtn.addEventListener('click', function() {
+                    const landscapePrompt = document.getElementById('landscape-prompt');
+                    if (landscapePrompt) {
+                        landscapePrompt.style.display = 'none';
+                    }
+                });
+            }
+            // 初始检查
+            setTimeout(checkOrientation, 100);
+        });
 
         // ==================== 页面加载完成 ====================
         window.addEventListener('load', function() {
