@@ -2829,14 +2829,8 @@
             
             // 设置触摸事件支持
             setupTouchSupport() {
-                // 阻止触摸事件的默认行为，防止页面滚动
-                document.addEventListener('touchstart', function(e) {
-                    e.preventDefault();
-                }, { passive: false });
-                
-                document.addEventListener('touchmove', function(e) {
-                    e.preventDefault();
-                }, { passive: false });
+                // 不再阻止整个文档的触摸事件，允许页面正常滚动
+                // 只在需要时阻止特定元素的默认行为
             }
         }
 
@@ -14098,10 +14092,13 @@
             const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
             const isPortrait = window.innerHeight > window.innerWidth;
             const landscapePrompt = document.getElementById('landscape-prompt');
+            const gameScreen = document.getElementById('game-screen');
             
-            if (isMobile && isPortrait && landscapePrompt) {
-                landscapePrompt.style.display = 'flex';
-            } else if (landscapePrompt) {
+            // 只在游戏界面显示横屏提示
+            const isInGame = gameScreen && gameScreen.classList.contains('active');
+            
+            if (landscapePrompt) {
+                // 默认隐藏横屏提示，允许用户正常浏览
                 landscapePrompt.style.display = 'none';
             }
         }

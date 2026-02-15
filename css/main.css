@@ -6423,6 +6423,8 @@
             justify-content: center;
             align-items: center;
             text-align: center;
+            touch-action: auto;
+            pointer-events: auto;
         }
         
         .landscape-content {
