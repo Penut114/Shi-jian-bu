@@ -8157,12 +8157,15 @@
                 grid.innerHTML = '';
                 
                 // 获取职业数据
-                const classes = this.gameManager.classManager.getClassesByDifficulty(this.currentFilter);
+                let classes = this.gameManager.classManager.getClassesByDifficulty(this.currentFilter);
                 
                 if (classes.length === 0) {
                     grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #a5b1c2;">暂无职业数据</div>';
                     return;
                 }
+                
+                // 按名称排序（支持中文）
+                classes = classes.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
                 
                 classes.forEach(cls => {
                     const classCard = this.createClassCard(cls);
@@ -8307,12 +8310,15 @@
                 grid.innerHTML = '';
                 
                 // 获取道具数据
-                const items = this.gameManager.cardManager.getCardsByCategory(this.currentFilter);
+                let items = this.gameManager.cardManager.getCardsByCategory(this.currentFilter);
                 
                 if (items.length === 0) {
                     grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #a5b1c2;">暂无道具数据</div>';
                     return;
                 }
+                
+                // 按名称排序（支持中文）
+                items = items.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
                 
                 items.forEach(item => {
                     const itemCard = this.createItemCard(item);
@@ -8504,12 +8510,15 @@
                 grid.innerHTML = '';
                 
                 // 获取卡牌数据
-                const cards = this.gameManager.cardManager.getCardsByRarity(this.currentFilter);
+                let cards = this.gameManager.cardManager.getCardsByRarity(this.currentFilter);
                 
                 if (cards.length === 0) {
                     grid.innerHTML = '<div style="grid-column: 1/-1; text-align: center; padding: 40px; color: #a5b1c2;">暂无卡牌数据</div>';
                     return;
                 }
+                
+                // 按名称排序（支持中文）
+                cards = cards.sort((a, b) => a.name.localeCompare(b.name, 'zh-CN'));
                 
                 cards.forEach(card => {
                     const cardElement = this.createCardElement(card);

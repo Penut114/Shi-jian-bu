@@ -192,6 +192,9 @@
                     </div>
                     
                     <div class="form-group" style="margin-top: 20px;">
+                        <button id="toggle-ready" class="menu-btn" style="background: rgba(46, 204, 113, 0.2); display: none;">
+                            <i class="fas fa-check"></i> 准备
+                        </button>
                         <button id="start-multiplayer-game" class="menu-btn" disabled>
                             <i class="fas fa-play"></i> 等待更多玩家...
                         </button>
@@ -1268,10 +1271,38 @@
     <!-- 通知区域 -->
     <div id="notification-area"></div>
 
-    <!-- 将所有JavaScript代码内联到这里 -->
-
+    <!-- Socket.io 客户端 -->
+    <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    
+    <!-- 游戏平台组件 -->
+    <script src="js/components/game-platform.js"></script>
+    <script src="js/components/auth-ui.js"></script>
+    
+    <!-- 联机系统 -->
     <script src="js/components/simple-multiplayer.js"></script>
     <script src="js/components/multiplayer-bindings.js"></script>
+    
+    <!-- 主程序 -->
     <script src="js/main.js"></script>
+    
+    <!-- 平台初始化 -->
+    <script>
+        // 初始化游戏平台
+        document.addEventListener('DOMContentLoaded', async function() {
+            // 初始化平台连接
+            await gamePlatform.init();
+            
+            // 监听平台事件
+            gamePlatform.on('connected', () => {
+                console.log('已连接到游戏平台服务器');
+            });
+            
+            gamePlatform.on('gameStart', (data) => {
+                // 只有收到游戏开始消息后才切换到职业选择界面
+                console.log('游戏开始！');
+                switchScreen('class-selection-screen');
+            });
+        });
+    </script>
 </body>
 </html>
