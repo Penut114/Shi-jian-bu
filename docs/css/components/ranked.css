@@ -1,0 +1,214 @@
+.ranked-header {
+    text-align: center;
+    margin-bottom: 40px;
+    position: relative;
+}
+
+.ranked-header h2 {
+    font-size: 3rem;
+    background: linear-gradient(45deg, #f39c12, #e67e22);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 15px;
+    text-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.ranked-content {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.current-rank-section {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.03));
+    border-radius: 20px;
+    padding: 30px;
+    margin-bottom: 30px;
+    border: 1px solid rgba(243, 156, 18, 0.3);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+    text-align: center;
+}
+
+.rank-badge-container {
+    margin-bottom: 20px;
+}
+
+.rank-badge {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: linear-gradient(45deg, #f39c12, #e67e22);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    font-size: 3rem;
+    box-shadow: 0 10px 30px rgba(243, 156, 18, 0.4);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+}
+
+.rank-info {
+    margin-bottom: 20px;
+}
+
+.rank-name {
+    display: block;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: #f39c12;
+    margin-bottom: 5px;
+}
+
+.rank-points {
+    display: block;
+    font-size: 1.2rem;
+    color: #a5b1c2;
+}
+
+.rank-progress {
+    margin-top: 20px;
+}
+
+.rank-progress .progress-bar {
+    width: 100%;
+    height: 12px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    overflow: hidden;
+    margin-bottom: 10px;
+}
+
+.rank-progress .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #f39c12, #e67e22);
+    border-radius: 6px;
+    transition: width 0.5s ease;
+}
+
+.progress-text {
+    color: #a5b1c2;
+    font-size: 0.9rem;
+}
+
+.season-info {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.03));
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    text-align: center;
+}
+
+.season-info h3 {
+    font-size: 1.2rem;
+    color: #4ecdc4;
+    margin-bottom: 10px;
+}
+
+.season-info p {
+    color: #a5b1c2;
+    margin: 5px 0;
+}
+
+.ranked-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: center;
+    margin-bottom: 30px;
+}
+
+.ranked-actions .menu-btn {
+    flex: 1;
+    max-width: 250px;
+}
+
+.ranked-history {
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.03));
+    border-radius: 15px;
+    padding: 25px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.ranked-history h3 {
+    font-size: 1.2rem;
+    color: #4ecdc4;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.match-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.match-item {
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    padding: 15px;
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    transition: all 0.3s ease;
+}
+
+.match-item:hover {
+    background: rgba(0, 0, 0, 0.3);
+    transform: translateX(5px);
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.match-result {
+    padding: 5px 15px;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 0.9rem;
+}
+
+.match-result.win {
+    background: linear-gradient(45deg, rgba(46, 204, 113, 0.2), rgba(39, 174, 96, 0.2));
+    color: #2ecc71;
+    border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+.match-result.lose {
+    background: linear-gradient(45deg, rgba(231, 76, 60, 0.2), rgba(204, 57, 43, 0.2));
+    color: #e74c3c;
+    border: 1px solid rgba(231, 76, 60, 0.3);
+}
+
+.match-result.draw {
+    background: linear-gradient(45deg, rgba(241, 196, 15, 0.2), rgba(243, 156, 18, 0.2));
+    color: #f1c40f;
+    border: 1px solid rgba(241, 196, 15, 0.3);
+}
+
+.match-info {
+    flex: 1;
+    color: #a5b1c2;
+}
+
+.match-points {
+    font-weight: 700;
+}
+
+.match-points.positive {
+    color: #2ecc71;
+}
+
+.match-points.negative {
+    color: #e74c3c;
+}
