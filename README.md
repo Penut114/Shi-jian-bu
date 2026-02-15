@@ -53,7 +53,7 @@ npm test
 
 ## 部署
 
-本项目支持 GitHub Pages 部署。
+本项目支持 GitHub Pages 部署，详细步骤请查看 [DEPLOY.md](DEPLOY.md)。
 
 ## License
 
