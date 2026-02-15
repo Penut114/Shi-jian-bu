@@ -10,6 +10,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const sendChatBtn = document.getElementById('send-chat');
     const chatInput = document.getElementById('chat-input');
     const backFromMultiplayerBtn = document.getElementById('back-from-multiplayer');
+    const toggleReadyBtn = document.getElementById('toggle-ready');
 
     if (!simpleMultiplayer) {
         simpleMultiplayer = new SimpleMultiplayer(null);
@@ -55,6 +56,14 @@ document.addEventListener('DOMContentLoaded', function() {
         startMultiplayerBtn.addEventListener('click', function() {
             if (simpleMultiplayer) {
                 simpleMultiplayer.startGame();
+            }
+        });
+    }
+
+    if (toggleReadyBtn) {
+        toggleReadyBtn.addEventListener('click', function() {
+            if (simpleMultiplayer) {
+                simpleMultiplayer.toggleReady();
             }
         });
     }

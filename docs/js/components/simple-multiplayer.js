@@ -54,7 +54,8 @@ class SimpleMultiplayer {
                     this.players.set(this.localPeerId, {
                         id: this.localPeerId,
                         name: this.playerName,
-                        isHost: true
+                        isHost: true,
+                        isReady: true
                     });
 
                     this.peer.on('connection', (conn) => {
@@ -107,6 +108,7 @@ class SimpleMultiplayer {
                     type: 'playerLeft',
                     playerId: conn.peer
                 });
+                this.addChatMessage('系统', `${player.name} 离开了房间`, true);
             }
         });
 
@@ -195,8 +197,14 @@ class SimpleMultiplayer {
             case 'chatMessage':
                 this.handleChatMessage(data, senderId);
                 break;
+            case 'playerReady':
+                this.handlePlayerReady(data);
+                break;
             case 'gameStart':
-                this.handleGameStartRequest(data, senderId);
+                this.handleGameStart(data);
+                break;
+            case 'kicked':
+                this.handleKicked(data);
                 break;
         }
     }
@@ -218,7 +226,8 @@ class SimpleMultiplayer {
         const newPlayer = {
             id: data.playerId,
             name: data.playerName,
-            isHost: false
+            isHost: false,
+            isReady: false
         };
 
         this.players.set(data.playerId, newPlayer);
@@ -239,6 +248,7 @@ class SimpleMultiplayer {
 
         this.updatePlayerList();
         this.showNotification(data.playerName + ' 加入了房间', 'info');
+        this.addChatMessage('系统', `${data.playerName} 加入了房间`, true);
     }
 
     handleJoinAccepted(data) {
@@ -261,11 +271,16 @@ class SimpleMultiplayer {
         this.players.set(data.player.id, data.player);
         this.updatePlayerList();
         this.showNotification(data.player.name + ' 加入了房间', 'info');
+        this.addChatMessage('系统', `${data.player.name} 加入了房间`, true);
     }
 
     handlePlayerLeft(data) {
+        const player = this.players.get(data.playerId);
         this.players.delete(data.playerId);
         this.updatePlayerList();
+        if (player) {
+            this.addChatMessage('系统', `${player.name} 离开了房间`, true);
+        }
     }
 
     handleRoomState(data) {
@@ -284,22 +299,18 @@ class SimpleMultiplayer {
         }
     }
 
-    handleGameStartRequest(data, senderId) {
+    handlePlayerReady(data) {
+        const player = this.players.get(data.playerId);
+        if (player) {
+            player.isReady = data.isReady;
+            this.updatePlayerList();
+            
+            const status = data.isReady ? '已准备' : '取消准备';
+            this.addChatMessage('系统', `${player.name} ${status}`, true);
+        }
+        
         if (this.isHost) {
-            let playerCount = this.players.size;
-            
-            if (playerCount < 2) {
-                this.showNotification('至少需要2名玩家才能开始游戏', 'error');
-                return;
-            }
-            
-            this.broadcast({
-                type: 'gameStart'
-            });
-            
-            this.handleGameStart({});
-        } else {
-            this.handleGameStart({});
+            this.broadcast(data);
         }
     }
 
@@ -312,6 +323,14 @@ class SimpleMultiplayer {
         
         if (typeof switchScreen === 'function') {
             switchScreen('class-selection-screen');
+        }
+    }
+
+    handleKicked(data) {
+        this.showNotification('你被房主踢出了房间', 'error');
+        this.leaveRoom();
+        if (typeof switchScreen === 'function') {
+            switchScreen('main-menu');
         }
     }
 
@@ -331,6 +350,52 @@ class SimpleMultiplayer {
         if (conn) {
             conn.send(data);
         }
+    }
+
+    toggleReady() {
+        const localPlayer = this.players.get(this.localPeerId);
+        if (!localPlayer || localPlayer.isHost) return;
+        
+        localPlayer.isReady = !localPlayer.isReady;
+        this.updatePlayerList();
+        
+        const status = localPlayer.isReady ? '已准备' : '取消准备';
+        this.showNotification(`你${status}`, 'info');
+        
+        const readyData = {
+            type: 'playerReady',
+            playerId: this.localPeerId,
+            isReady: localPlayer.isReady
+        };
+        
+        this.sendToHost(readyData);
+    }
+
+    kickPlayer(playerId) {
+        if (!this.isHost) return;
+        
+        const player = this.players.get(playerId);
+        if (!player || player.isHost) return;
+        
+        const conn = this.connections.get(playerId);
+        if (conn) {
+            conn.send({
+                type: 'kicked'
+            });
+            conn.close();
+        }
+        
+        this.connections.delete(playerId);
+        this.players.delete(playerId);
+        this.updatePlayerList();
+        
+        this.broadcast({
+            type: 'playerLeft',
+            playerId: playerId
+        });
+        
+        this.showNotification(`已踢出 ${player.name}`, 'info');
+        this.addChatMessage('系统', `${player.name} 被踢出了房间`, true);
     }
 
     sendChatMessage(message) {
@@ -381,30 +446,84 @@ class SimpleMultiplayer {
             
             const isLocalPlayer = player.id === this.localPeerId;
             
+            let statusText = player.isReady ? '✓ 已准备' : '✗ 未准备';
+            if (player.isHost) {
+                statusText = '👑 房主';
+            }
+            
+            let kickButton = '';
+            if (this.isHost && !player.isHost && !isLocalPlayer) {
+                kickButton = `<button class="kick-btn" onclick="simpleMultiplayer.kickPlayer('${player.id}')" style="margin-left: 10px; padding: 2px 8px; background: rgba(231, 76, 60, 0.3); border: none; border-radius: 4px; color: #e74c3c; cursor: pointer; font-size: 12px;">踢出</button>`;
+            }
+            
             playerDiv.innerHTML = `
                 <div class="player-avatar-small">👤</div>
                 <div style="flex: 1;">
-                    <div style="font-weight: bold;">${player.name} ${player.isHost ? '👑' : ''} ${isLocalPlayer ? '(你)' : ''}</div>
+                    <div style="font-weight: bold;">${player.name} ${isLocalPlayer ? '(你)' : ''}</div>
+                    <div style="font-size: 0.8rem; color: #a5b1c2;">${statusText}</div>
                 </div>
+                ${kickButton}
             `;
             playerListContainer.appendChild(playerDiv);
         });
 
         this.updateStartButton();
+        this.updateReadyButton();
     }
 
     updateStartButton() {
         const startButton = document.getElementById('start-multiplayer-game');
         if (!startButton) return;
         
-        let playerCount = this.players.size;
+        if (!this.isHost) {
+            startButton.innerHTML = '<i class="fas fa-play"></i> 等待房主开始';
+            startButton.disabled = true;
+            startButton.style.display = 'block';
+            return;
+        }
+        
+        let allReady = true;
+        let playerCount = 0;
+        
+        this.players.forEach(player => {
+            playerCount++;
+            if (!player.isReady) {
+                allReady = false;
+            }
+        });
         
         if (playerCount < 2) {
             startButton.innerHTML = '<i class="fas fa-play"></i> 等待更多玩家...';
             startButton.disabled = true;
-        } else {
+        } else if (allReady) {
             startButton.innerHTML = '<i class="fas fa-play"></i> 开始游戏';
             startButton.disabled = false;
+        } else {
+            startButton.innerHTML = '<i class="fas fa-play"></i> 等待玩家准备...';
+            startButton.disabled = true;
+        }
+        
+        startButton.style.display = 'block';
+    }
+
+    updateReadyButton() {
+        const readyButton = document.getElementById('toggle-ready');
+        if (!readyButton) return;
+        
+        const localPlayer = this.players.get(this.localPeerId);
+        if (!localPlayer || localPlayer.isHost) {
+            readyButton.style.display = 'none';
+            return;
+        }
+        
+        readyButton.style.display = 'block';
+        
+        if (localPlayer.isReady) {
+            readyButton.innerHTML = '<i class="fas fa-times"></i> 取消准备';
+            readyButton.style.background = 'rgba(231, 76, 60, 0.2)';
+        } else {
+            readyButton.innerHTML = '<i class="fas fa-check"></i> 准备';
+            readyButton.style.background = 'rgba(46, 204, 113, 0.2)';
         }
     }
 
@@ -426,22 +545,34 @@ class SimpleMultiplayer {
     }
 
     startGame() {
-        let playerCount = this.players.size;
+        if (!this.isHost) {
+            this.showNotification('只有房主才能开始游戏', 'error');
+            return;
+        }
+        
+        let allReady = true;
+        let playerCount = 0;
+        
+        this.players.forEach(player => {
+            playerCount++;
+            if (!player.isReady) {
+                allReady = false;
+            }
+        });
         
         if (playerCount < 2) {
             this.showNotification('至少需要2名玩家才能开始游戏', 'error');
             return;
         }
-
-        if (this.isHost) {
-            this.broadcast({
-                type: 'gameStart'
-            });
-        } else {
-            this.sendToHost({
-                type: 'gameStart'
-            });
+        
+        if (!allReady) {
+            this.showNotification('请等待所有玩家准备就绪', 'error');
+            return;
         }
+
+        this.broadcast({
+            type: 'gameStart'
+        });
 
         this.handleGameStart({});
     }
@@ -481,5 +612,14 @@ style.textContent = `
         from { transform: translateX(0); opacity: 1; }
         to { transform: translateX(100%); opacity: 0; }
     }
+    .chat-message.system {
+        color: #a5b1c2;
+        font-style: italic;
+    }
+    .kick-btn:hover {
+        background: rgba(231, 76, 60, 0.5) !important;
+    }
 `;
 document.head.appendChild(style);
+
+let simpleMultiplayer = null;
